@@ -1,4 +1,4 @@
-const CACHE_NAME = 'controle-financeiro-pwa';
+const CACHE_NAME = 'controle-financeiro-pwa-v7'';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
