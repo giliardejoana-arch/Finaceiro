@@ -1,12 +1,17 @@
 {
+  "id": "./",
   "name": "Controle Financeiro de Clientes",
   "short_name": "Controle Fin.",
   "description": "Gestão de clientes, compras parceladas, backup e envio de extrato pelo WhatsApp.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
   "orientation": "portrait-primary",
-  "background_color": "#f1f5f9",
+  "background_color": "#1d4ed8",
   "theme_color": "#1d4ed8",
   "lang": "pt-BR",
   "icons": [
