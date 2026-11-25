@@ -180,10 +180,10 @@
             </div>
 
             <div class="p-5 space-y-4">
-                <!-- Configuração local do Firebase (aparece só se não houver ./firebase-config.json nem config salva no navegador) -->
+                <!-- Fallback caso a configuração remota/local não seja encontrada -->
                 <div id="firebaseSetupBox" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-xs text-amber-950 space-y-2.5">
-                    <p class="font-bold">Conectar Firebase neste dispositivo</p>
-                    <p class="text-amber-900 leading-relaxed">Cole o objeto da configuração do Firebase (fica salvo apenas neste navegador):</p>
+                    <p class="font-bold">Configuração do Firebase não encontrada</p>
+                    <p class="text-amber-900 leading-relaxed">Configure uma URL externa ou cole a configuração abaixo para salvar neste navegador:</p>
                     <textarea id="firebaseConfigInput" rows="5" placeholder='{"apiKey":"...","authDomain":"...","projectId":"...","storageBucket":"...","messagingSenderId":"...","appId":"..."}' class="w-full p-2.5 bg-white border border-amber-300 rounded-lg font-mono text-[11px] text-slate-800 focus:ring-2 focus:ring-brand-500 outline-none"></textarea>
                     <button type="button" onclick="saveFirebaseConfigFromInput()" class="w-full py-2.5 px-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs transition">
                         Salvar Configuração neste Aparelho
@@ -213,9 +213,8 @@
                     </button>
                 </form>
 
-                <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+                <div class="pt-2 border-t border-slate-100 text-center text-[11px] text-slate-400">
                     <span>Ambiente protegido • Dados sincronizados</span>
-                    <button type="button" onclick="toggleFirebaseConfigBox()" class="text-brand-600 hover:underline font-semibold">Config. Firebase</button>
                 </div>
             </div>
         </div>
@@ -769,6 +768,7 @@
         const FIREBASE_CFG_KEY = 'controle_financeiro_firebase_cfg_v1';
         const ADMIN_EMAIL_KEY = 'controle_financeiro_admin_email_v1';
         const DEFAULT_FIREBASE_CONFIG = null;
+        const REMOTE_CONFIG_URL = 'https://SEU-LINK-AQUI/firebase-config.json';
 
         let fbApp = null;
         let fbAuth = null;
@@ -822,39 +822,50 @@
             }
         }
 
-        async function autoLoadFirebaseConfig() {
-            const saved = localStorage.getItem(FIREBASE_CFG_KEY);
-            if (saved) return;
-
-            try {
-                const res = await fetch('./firebase-config.json', { cache: 'no-store' });
-                if (!res.ok) return;
-                const cfg = await res.json();
-                if (cfg && cfg.apiKey && cfg.projectId) {
-                    localStorage.setItem(FIREBASE_CFG_KEY, JSON.stringify(cfg));
-                }
-            } catch (_) {
-                // Se ./firebase-config.json não existir, o campo manual continua disponível
-            }
+        function isValidFirebaseConfig(cfg) {
+            return Boolean(cfg && typeof cfg === 'object' && cfg.apiKey && cfg.projectId);
         }
 
-        function toggleFirebaseConfigBox() {
-            const box = document.getElementById('firebaseSetupBox');
-            const input = document.getElementById('firebaseConfigInput');
-            box.classList.toggle('hidden');
-            if (!box.classList.contains('hidden')) {
-                const saved = localStorage.getItem(FIREBASE_CFG_KEY);
-                if (saved && !input.value.trim()) {
-                    input.value = saved;
-                }
+        async function fetchConfigJson(url) {
+            if (!url || typeof url !== 'string' || !url.trim() || url.includes('SEU-LINK-AQUI')) {
+                return null;
             }
+            const res = await fetch(url.trim(), { cache: 'no-store' });
+            if (!res.ok) return null;
+            const cfg = await res.json();
+            return isValidFirebaseConfig(cfg) ? cfg : null;
+        }
+
+        async function autoLoadFirebaseConfig() {
+            const saved = localStorage.getItem(FIREBASE_CFG_KEY);
+            if (saved) {
+                try {
+                    const parsedSaved = parseFirebaseConfigText(saved);
+                    if (isValidFirebaseConfig(parsedSaved)) return;
+                } catch (_) {}
+            }
+
+            try {
+                const remoteCfg = await fetchConfigJson(REMOTE_CONFIG_URL);
+                if (remoteCfg) {
+                    localStorage.setItem(FIREBASE_CFG_KEY, JSON.stringify(remoteCfg));
+                    return;
+                }
+            } catch (_) {}
+
+            try {
+                const localCfg = await fetchConfigJson('./firebase-config.json');
+                if (localCfg) {
+                    localStorage.setItem(FIREBASE_CFG_KEY, JSON.stringify(localCfg));
+                }
+            } catch (_) {}
         }
 
         function saveFirebaseConfigFromInput() {
             const raw = document.getElementById('firebaseConfigInput').value;
             try {
                 const parsed = parseFirebaseConfigText(raw);
-                if (!parsed || !parsed.apiKey || !parsed.projectId) {
+                if (!isValidFirebaseConfig(parsed)) {
                     showToast('Informe um objeto válido com apiKey e projectId.', 'error');
                     return;
                 }
@@ -938,7 +949,7 @@
 
             try {
                 const cfgObj = parseFirebaseConfigText(rawCfg);
-                if (!cfgObj || !cfgObj.apiKey || !cfgObj.projectId) {
+                if (!isValidFirebaseConfig(cfgObj)) {
                     throw new Error('Configuração incompleta');
                 }
                 if (!fbApp) {
@@ -1062,7 +1073,7 @@
 
                     clients = [
                         {
-                            id: 'cli_exemplo_1',
+                            id: 'cli_exemplo _1',
                             name: 'Maria Silva',
                             phone: '(85) 99999-8888',
                             address: 'Rua das Flores, 120 - Centro, Horizonte - CE',
@@ -2126,4 +2137,3 @@
     </script>
 </body>
 </html>
-
