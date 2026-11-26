@@ -152,7 +152,12 @@
         main {
             padding-left: calc(1rem + env(safe-area-inset-left, 0px));
             padding-right: calc(1rem + env(safe-area-inset-right, 0px));
-            padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
+            padding-bottom: calc(8.5rem + env(safe-area-inset-bottom, 0px));
+        }
+
+        /* Garante que o conteúdo da ficha do cliente nunca fique sob o botão fixo do WhatsApp */
+        #viewClientDetail {
+            padding-bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
         }
 
         .fixed.bottom-0 {
@@ -343,7 +348,7 @@
     </div>
 
     <!-- ==================== CONTEÚDO PRINCIPAL ==================== -->
-    <main class="flex-1 max-w-3xl w-full mx-auto px-4 py-5 pb-28">
+    <main class="flex-1 max-w-3xl w-full mx-auto px-4 py-5 pb-36">
 
         <!-- TELA 1: LISTA DE CLIENTES -->
         <section id="viewHome" class="fade-in space-y-5">
@@ -473,7 +478,7 @@
             </button>
 
             <!-- Lista de Compras e Parcelas do Cliente -->
-            <div class="space-y-4">
+            <div class="space-y-4 pb-8">
                 <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500">Compras e Parcelas</h3>
                 
                 <div id="purchasesContainer" class="space-y-4">
@@ -630,7 +635,7 @@
                             inputmode="numeric"
                             oninput="updateInstallmentPreview()"
                             onchange="updateInstallmentPreview()"
-                            placeholder="Ex: 4, 15, 24..."
+                            placeholder="Ex: 1, 4, 15, 24..."
                             class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-base font-bold text-slate-900 bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
                         >
                     </div>
@@ -1364,9 +1369,12 @@
                     installmentsHTML += `
                         <div class="p-3.5 border-t ${rowClass} flex items-center justify-between gap-3 transition-all duration-200">
                             <div class="min-w-0">
-                                <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-2 flex-wrap">
                                     <span class="text-xs font-extrabold px-2 py-0.5 rounded-md ${isPaid ? 'bg-slate-200 text-slate-600' : 'bg-brand-100 text-brand-700'}">
                                         Parcela ${inst.number}/${inst.total}
+                                    </span>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}">
+                                        ${isPaid ? 'PAGA' : 'EM ABERTO'}
                                     </span>
                                     <span class="text-base ${textStrike}">
                                         ${formatCurrency(inst.amount)}
@@ -1397,7 +1405,7 @@
                                 ${allPaid ? '<span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Quitado</span>' : ''}
                             </div>
                             <p class="text-xs text-slate-500 mt-1">
-                                Valor total: <strong class="text-slate-700">${formatCurrency(purchase.totalAmount)}</strong> • Parcelado em <strong>${totalCount}x</strong> (${paidCount}/${totalCount} pagas)
+                                Valor total: <strong class="text-slate-700">${formatCurrency(purchase.totalAmount)}</strong> • ${totalCount === 1 ? 'À vista / 1x' : `Parcelado em <strong>${totalCount}x</strong>`} (${paidCount}/${totalCount} pagas)
                             </p>
                         </div>
                         <button onclick="confirmDeletePurchase('${purchase.id}', '${escapeHTML(purchase.item)}')" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="Excluir esta compra">
@@ -1411,6 +1419,11 @@
 
                 container.appendChild(purchaseCard);
             });
+
+            // Espaçador extra ao final da lista para garantir rolagem limpa acima da barra fixa do WhatsApp
+            const bottomSpacer = document.createElement('div');
+            bottomSpacer.className = 'h-24 w-full pointer-events-none';
+            container.appendChild(bottomSpacer);
         }
 
         function toggleInstallmentPaid(purchaseId, installmentId) {
@@ -1432,7 +1445,7 @@
             if (inst.paid) {
                 showToast(`Parcela ${inst.number}/${inst.total} marcada como PAGA!`, 'success');
             } else {
-                showToast(`Pagamento da parcela ${inst.number}/${inst.total} desfeito.`, 'info');
+                showToast(`Pagamento da parcela ${inst.number}/${inst.total} desfeito (Em Aberto).`, 'info');
             }
         }
 
@@ -1634,7 +1647,7 @@
             saveData();
             closePurchaseModal();
             renderClientDetail();
-            showToast(`Compra "${item}" parcelada em ${count}x!`, 'success');
+            showToast(count === 1 ? `Compra "${item}" gerada em 1x!` : `Compra "${item}" parcelada em ${count}x!`, 'success');
         }
 
         function confirmDeletePurchase(purchaseId, itemName) {
